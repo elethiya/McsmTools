@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"void-panel/pkg/config"
-	"void-panel/pkg/mcserver"
+	"McsmTools/pkg/config"
+	"McsmTools/pkg/mcserver"
 )
 
 type DownloadStatus struct {
@@ -101,7 +101,7 @@ func DownloadPaperJarIntoDir(destDir, version string) error {
 
 		currentStatus.Progress = 100
 		currentStatus.Message = fmt.Sprintf("Successfully downloaded %s and set as default server jar!", fileName)
-		mcserver.GetManager().BroadcastLog(fmt.Sprintf("[VoidPanel] Downloaded server jar: %s", fileName))
+		mcserver.GetManager().BroadcastLog(fmt.Sprintf("[McsmTools] Downloaded server jar: %s", fileName))
 	}()
 
 	return nil
@@ -140,7 +140,7 @@ func DownloadFromURL(url string, targetName string) error {
 
 		currentStatus.Progress = 100
 		currentStatus.Message = fmt.Sprintf("Successfully downloaded %s!", targetName)
-		mcserver.GetManager().BroadcastLog(fmt.Sprintf("[VoidPanel] Downloaded server jar from URL: %s", targetName))
+		mcserver.GetManager().BroadcastLog(fmt.Sprintf("[McsmTools] Downloaded server jar from URL: %s", targetName))
 	}()
 
 	return nil

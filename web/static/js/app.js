@@ -1,6 +1,6 @@
-/* ======================================================
-   VOID PANEL - MAIN CLIENT APPLICATION JS
-   ====================================================== */
+/* ==========================================================================
+   McsmTools - MAIN CLIENT APPLICATION JS
+   ========================================================================== */
 
 document.addEventListener('DOMContentLoaded', () => {
     // Application State
@@ -209,7 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
         state.ws = new WebSocket(wsUrl);
 
         state.ws.onopen = () => {
-            console.log('[VoidPanel] WebSocket connected');
+            console.log('[McsmTools] WebSocket connected');
         };
 
         state.ws.onmessage = (event) => {
@@ -228,7 +228,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         state.ws.onclose = () => {
-            console.warn('[VoidPanel] WebSocket disconnected. Retrying in 3s...');
+            console.warn('[McsmTools] WebSocket disconnected. Retrying in 3s...');
             setTimeout(initWebSocket, 3000);
         };
     }

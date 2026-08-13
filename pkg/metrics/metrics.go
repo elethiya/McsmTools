@@ -10,8 +10,8 @@ import (
 	"github.com/shirou/gopsutil/v3/mem"
 	"github.com/shirou/gopsutil/v3/process"
 
-	"void-panel/pkg/config"
-	"void-panel/pkg/mcserver"
+	"McsmTools/pkg/config"
+	"McsmTools/pkg/mcserver"
 )
 
 type SystemMetrics struct {

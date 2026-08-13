@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"void-panel/pkg/config"
+	"McsmTools/pkg/config"
 )
 
 type ModrinthSearchResult struct {
@@ -108,7 +108,7 @@ func SearchModrinthPlugins(query string) ([]ModrinthProject, error) {
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("User-Agent", "VoidPanel/1.0.0 (admin@voidpanel.local)")
+	req.Header.Set("User-Agent", "McsmTools/1.0.0 (admin@mcsmtools.local)")
 
 	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(req)
@@ -150,7 +150,7 @@ func InstallPluginJar(downloadURL, fileName string) error {
 	if err != nil {
 		return err
 	}
-	req.Header.Set("User-Agent", "VoidPanel/1.0.0 (admin@voidpanel.local)")
+	req.Header.Set("User-Agent", "McsmTools/1.0.0 (admin@mcsmtools.local)")
 
 	client := &http.Client{Timeout: 5 * time.Minute}
 	resp, err := client.Do(req)

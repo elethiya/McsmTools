@@ -9,9 +9,9 @@ import (
 
 	"github.com/gorilla/websocket"
 
-	"void-panel/pkg/auth"
-	"void-panel/pkg/mcserver"
-	"void-panel/pkg/metrics"
+	"McsmTools/pkg/auth"
+	"McsmTools/pkg/mcserver"
+	"McsmTools/pkg/metrics"
 )
 
 var upgrader = websocket.Upgrader{

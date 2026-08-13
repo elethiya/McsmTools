@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"void-panel/pkg/config"
+	"McsmTools/pkg/config"
 )
 
 type SessionStore struct {
@@ -18,7 +18,7 @@ var store = &SessionStore{
 	sessions: make(map[string]time.Time),
 }
 
-const CookieName = "void_session"
+const CookieName = "mcsm_session"
 const SessionDuration = 24 * time.Hour
 
 func Authenticate(username, password string) bool {

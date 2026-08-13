@@ -1,9 +1,7 @@
 .env
-void-panel
+McsmTools
 logs/
 config.json
-go.mod
-go.sum
 errors.txt
 servers.json
 .git/

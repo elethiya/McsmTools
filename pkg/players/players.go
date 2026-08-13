@@ -5,8 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"void-panel/pkg/config"
-	"void-panel/pkg/mcserver"
+	"McsmTools/pkg/config"
+	"McsmTools/pkg/mcserver"
 )
 
 type PlayerInfo struct {

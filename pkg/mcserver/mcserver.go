@@ -11,8 +11,8 @@ import (
 	"sync"
 	"time"
 
-	"void-panel/pkg/config"
-	"void-panel/pkg/logger"
+	"McsmTools/pkg/config"
+	"McsmTools/pkg/logger"
 )
 
 type ServerStatus string
@@ -330,6 +330,6 @@ func (m *Manager) Kill() error {
 
 func ensureEula(serverDir string) {
 	eulaPath := filepath.Join(serverDir, "eula.txt")
-	content := "# Auto-accepted by VoidPanel\neula=true\n"
+	content := "# Auto-accepted by McsmTools\neula=true\n"
 	_ = os.WriteFile(eulaPath, []byte(content), 0644)
 }

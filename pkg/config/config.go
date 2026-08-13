@@ -95,7 +95,7 @@ func saveConfigLocked(cfg *Config) error {
 func generateRandomSecret() string {
 	bytes := make([]byte, 32)
 	if _, err := rand.Read(bytes); err != nil {
-		return "void-panel-super-secret-key-change-me"
+		return "mcsm-tools-super-secret-key-change-me"
 	}
 	return hex.EncodeToString(bytes)
 }

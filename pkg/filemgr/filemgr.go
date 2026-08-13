@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"void-panel/pkg/config"
+	"McsmTools/pkg/config"
 )
 
 type FileItem struct {
