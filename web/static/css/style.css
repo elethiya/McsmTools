@@ -2,6 +2,8 @@
    McsmTools - DESIGN SYSTEM & STYLESHEET
    ========================================================================== */
 
+@import url('https://fonts.googleapis.com/css2?family=Quantico:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+
 :root {
     --bg-base: #0b0f19;
     --bg-surface: #131b2e;
@@ -32,6 +34,7 @@
 
     --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
+    --font-brand: 'Quantico', sans-serif;
 
     --radius-sm: 6px;
     --radius-md: 10px;
@@ -76,6 +79,19 @@ body {
 .margin-bottom-sm { margin-bottom: 12px; }
 .text-xs { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
 .text-sm { font-size: 13px; color: var(--text-secondary); }
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-brand);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+#pageTitle {
+    background: linear-gradient(to bottom, #ff8a00, #d64a00);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0px 2px 2px rgba(0,0,0,0.5));
+}
 
 /* Login Page Styling */
 .login-body {
@@ -221,10 +237,34 @@ body {
 .brand-logo {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 24px;
+    gap: 12px;
+}
+
+.brand-logo.custom-theme .title-inline {
+    display: flex;
+    flex-direction: row;
+    align-items: baseline;
+    gap: 6px;
+    line-height: 1;
+    font-family: 'Quantico', sans-serif;
     font-weight: 700;
-    color: white;
+    text-transform: uppercase;
+    filter: drop-shadow(0px 4px 2px rgba(0,0,0,0.7));
+}
+
+.brand-logo.custom-theme .mcsm-text {
+    font-size: 26px;
+    background: linear-gradient(to bottom, #ff8a00, #d64a00);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: 1px;
+}
+
+.brand-logo.custom-theme .tools-text {
+    font-size: 26px;
+    background: linear-gradient(to bottom, #ffffff, #c0c0c0);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
     letter-spacing: 1px;
 }
 
