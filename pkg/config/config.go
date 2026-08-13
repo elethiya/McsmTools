@@ -39,7 +39,7 @@ func LoadConfig() (*Config, error) {
 		AuthEnabled:   true,
 		Username:      "admin",
 		Password:      "admin123",
-		ServerDir:     "./mc_server",
+		ServerDir:     "./servers/default-server",
 		JavaPath:      "java",
 		ServerJar:     "server.jar",
 		MemoryMin:     "1024M",

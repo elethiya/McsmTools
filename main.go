@@ -35,12 +35,18 @@ func (lrw *loggingResponseWriter) WriteHeader(code int) {
 
 func httpLoggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/ws" {
+			// Do not wrap ResponseWriter for WebSockets to allow http.Hijacker
+			next.ServeHTTP(w, r)
+			return
+		}
+
 		start := time.Now()
 		lrw := &loggingResponseWriter{ResponseWriter: w, statusCode: http.StatusOK}
 		next.ServeHTTP(lrw, r)
 		duration := time.Since(start)
 
-		if !strings.HasPrefix(r.URL.Path, "/static/") && r.URL.Path != "/ws" {
+		if !strings.HasPrefix(r.URL.Path, "/static/") {
 			logger.HTTPLog("%s %s %d (%v)", r.Method, r.URL.Path, lrw.statusCode, duration)
 		}
 	})
@@ -138,8 +144,12 @@ func main() {
 
 	// Installer API
 	mux.HandleFunc("/api/installer/status", auth.RequireAuth(handleInstallerStatus))
+	mux.HandleFunc("/api/installer/links", auth.RequireAuth(handleInstallerLinks))
+	mux.HandleFunc("/api/installer/softwares", auth.RequireAuth(handleInstallerSoftwares))
+	mux.HandleFunc("/api/installer/versions", auth.RequireAuth(handleInstallerVersions))
 	mux.HandleFunc("/api/installer/paper-versions", auth.RequireAuth(handlePaperVersions))
 	mux.HandleFunc("/api/installer/download-paper", auth.RequireAuth(handleDownloadPaper))
+	mux.HandleFunc("/api/installer/download-software", auth.RequireAuth(handleDownloadSoftware))
 	mux.HandleFunc("/api/installer/download-url", auth.RequireAuth(handleDownloadURL))
 
 	// WebSocket Endpoint
@@ -215,23 +225,26 @@ func handleServerList(w http.ResponseWriter, r *http.Request) {
 
 func handleServerCreate(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		Name         string `json:"name"`
-		PaperVersion string `json:"version"`
-		Port         int    `json:"port"`
-		MemoryMin    string `json:"memory_min"`
-		MemoryMax    string `json:"memory_max"`
+		Name      string `json:"name"`
+		Edition   string `json:"edition"`
+		Software  string `json:"software"`
+		Version   string `json:"version"`
+		Port      int    `json:"port"`
+		MemoryMin string `json:"memory_min"`
+		MemoryMax string `json:"memory_max"`
+		CustomURL string `json:"custom_url"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
-	srv, err := servermgr.CreateServer(req.Name, req.PaperVersion, req.Port, req.MemoryMin, req.MemoryMax)
+	srv, err := servermgr.CreateServer(req.Name, req.Edition, req.Software, req.Version, req.Port, req.MemoryMin, req.MemoryMax, req.CustomURL)
 	if err != nil {
 		logger.Error("Failed to create server instance '%s': %v", req.Name, err)
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	logger.Success("Created server instance '%s' (ID: %s, Port: %d)", req.Name, srv.ID, srv.Port)
+	logger.Success("Created server instance '%s' (Edition: %s, Software: %s, ID: %s, Port: %d)", req.Name, req.Edition, req.Software, srv.ID, srv.Port)
 	writeJSON(w, http.StatusOK, map[string]interface{}{"success": true, "server": srv})
 }
 
@@ -708,6 +721,18 @@ func handleInstallerStatus(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, installers.GetStatus())
 }
 
+func handleInstallerLinks(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, installers.GetSoftwareLinks())
+}
+
+func handleInstallerSoftwares(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, installers.GetSoftwareOptions())
+}
+
+func handleInstallerVersions(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, installers.GetPresetVersions())
+}
+
 func handlePaperVersions(w http.ResponseWriter, r *http.Request) {
 	versions, err := installers.FetchPaperVersions()
 	if err != nil {
@@ -715,6 +740,21 @@ func handlePaperVersions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, versions)
+}
+
+func getActiveServerDir() string {
+	active := servermgr.GetActiveServer()
+	if active != nil && active.ServerDir != "" {
+		if absPath, err := filepath.Abs(active.ServerDir); err == nil {
+			return absPath
+		}
+	}
+	if config.GlobalConfig != nil && config.GlobalConfig.ServerDir != "" {
+		if absPath, err := filepath.Abs(config.GlobalConfig.ServerDir); err == nil {
+			return absPath
+		}
+	}
+	return "./servers/default-server"
 }
 
 func handleDownloadPaper(w http.ResponseWriter, r *http.Request) {
@@ -725,12 +765,13 @@ func handleDownloadPaper(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "Paper version required")
 		return
 	}
-	if err := installers.DownloadPaperJar(req.Version); err != nil {
+	destDir := getActiveServerDir()
+	if err := installers.DownloadPaperJarIntoDir(destDir, req.Version); err != nil {
 		logger.Error("Failed to initiate Paper %s download: %v", req.Version, err)
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	logger.Info("Initiated Paper %s download", req.Version)
+	logger.Info("Initiated Paper %s download into %s", req.Version, destDir)
 	writeJSON(w, http.StatusOK, map[string]bool{"success": true})
 }
 
@@ -743,11 +784,32 @@ func handleDownloadURL(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "Valid URL required")
 		return
 	}
-	if err := installers.DownloadFromURL(req.URL, req.Name); err != nil {
+	destDir := getActiveServerDir()
+	if err := installers.DownloadFromURLToDir(req.URL, req.Name, destDir); err != nil {
 		logger.Error("Failed to initiate URL download: %v", err)
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	logger.Info("Initiated custom jar download from %s", req.URL)
+	logger.Info("Initiated custom jar download from %s into %s", req.URL, destDir)
+	writeJSON(w, http.StatusOK, map[string]bool{"success": true})
+}
+
+func handleDownloadSoftware(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Software string `json:"software"`
+		Version  string `json:"version"`
+		URL      string `json:"url,omitempty"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+	destDir := getActiveServerDir()
+	if err := installers.DownloadServerSoftwareIntoDir(destDir, req.Software, req.Version, req.URL); err != nil {
+		logger.Error("Failed to initiate %s download: %v", req.Software, err)
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	logger.Info("Initiated %s (%s) download into %s", req.Software, req.Version, destDir)
 	writeJSON(w, http.StatusOK, map[string]bool{"success": true})
 }

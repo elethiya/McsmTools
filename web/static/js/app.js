@@ -2,7 +2,7 @@
    McsmTools - MAIN CLIENT APPLICATION JS
    ========================================================================== */
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     // Application State
     const state = {
         currentTab: 'dashboard',
@@ -18,6 +18,22 @@ document.addEventListener('DOMContentLoaded', () => {
         servers: [],
         activeServerID: ''
     };
+
+    let SOFTWARE_OPTIONS = {};
+    let PRESET_VERSIONS = {};
+
+    try {
+        const swRes = await fetch('/api/installer/softwares');
+        if (swRes.ok) SOFTWARE_OPTIONS = await swRes.json();
+        
+        const vRes = await fetch('/api/installer/versions');
+        if (vRes.ok) PRESET_VERSIONS = await vRes.json();
+    } catch (e) {
+        console.error('Failed to fetch config', e);
+    }
+
+    let cachedPaperVersions = [];
+    let modalEventsAttached = false;
 
     // Initialize Components
     initNavigation();
@@ -85,7 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (tabId === 'players') loadPlayerLists();
         if (tabId === 'plugins') { loadPluginList(); loadFeaturedPlugins(); }
         if (tabId === 'config') loadProperties();
-        if (tabId === 'installer') loadPaperVersions();
+        if (tabId === 'installer') populateInstallerDropdowns();
         if (tabId === 'settings') loadSettings();
     }
 
@@ -122,17 +138,20 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('createServerForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const name = document.getElementById('newServerName').value.trim();
-            const port = parseInt(document.getElementById('newServerPort').value, 10);
+            const edition = document.getElementById('newServerEdition').value;
+            const software = document.getElementById('newServerSoftware').value;
             const version = document.getElementById('newServerVersion').value;
+            const custom_url = document.getElementById('newServerCustomUrl')?.value.trim() || '';
+            const port = parseInt(document.getElementById('newServerPort').value, 10);
             const memory_min = document.getElementById('newServerRamMin').value;
             const memory_max = document.getElementById('newServerRamMax').value;
 
             const res = await callApi('/api/servers/create', {
-                body: JSON.stringify({ name, version, port, memory_min, memory_max })
+                body: JSON.stringify({ name, edition, software, version, port, memory_min, memory_max, custom_url })
             });
 
             if (res && res.success) {
-                showToast(`Created server instance ${name}!`, 'success');
+                showToast(`Created server instance '${name}'! Software download started.`, 'success');
                 document.getElementById('createServerModal').classList.add('hidden');
                 loadServersList();
             }
@@ -153,6 +172,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         loadServersList();
+        populateCreateServerVersions();
     }
 
     async function loadServersList() {
@@ -170,7 +190,8 @@ document.addEventListener('DOMContentLoaded', () => {
             state.servers.forEach(s => {
                 const opt = document.createElement('option');
                 opt.value = s.id;
-                opt.textContent = `${s.name} (${s.port})`;
+                const badge = s.software ? ` [${s.software.toUpperCase()}]` : '';
+                opt.textContent = `${s.name}${badge} (${s.port})`;
                 if (s.id === state.activeServerID) opt.selected = true;
                 select.appendChild(opt);
             });
@@ -179,23 +200,110 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+
+
+    function setupCreateServerModalEvents() {
+        if (modalEventsAttached) return;
+        modalEventsAttached = true;
+
+        const editionSelect = document.getElementById('newServerEdition');
+        const softwareSelect = document.getElementById('newServerSoftware');
+
+        if (editionSelect) {
+            editionSelect.addEventListener('change', () => {
+                const ed = editionSelect.value;
+                const portInput = document.getElementById('newServerPort');
+                if (portInput) {
+                    portInput.value = ed === 'bedrock' ? '19132' : '25565';
+                }
+                updateSoftwareDropdown();
+            });
+        }
+
+        if (softwareSelect) {
+            softwareSelect.addEventListener('change', () => {
+                updateVersionDropdown();
+            });
+        }
+    }
+
+    function updateSoftwareDropdown() {
+        const ed = document.getElementById('newServerEdition')?.value || 'java';
+        const softwareSelect = document.getElementById('newServerSoftware');
+        if (!softwareSelect) return;
+
+        const options = SOFTWARE_OPTIONS[ed] || SOFTWARE_OPTIONS.java;
+        softwareSelect.innerHTML = '';
+
+        options.forEach(sw => {
+            const opt = document.createElement('option');
+            opt.value = sw.id;
+            opt.textContent = sw.name;
+            softwareSelect.appendChild(opt);
+        });
+
+        updateVersionDropdown();
+    }
+
+    function updateVersionDropdown() {
+        const ed = document.getElementById('newServerEdition')?.value || 'java';
+        const swId = document.getElementById('newServerSoftware')?.value || 'paper';
+        const versionSelect = document.getElementById('newServerVersion');
+        const customGroup = document.getElementById('customUrlGroup');
+        const infoBadge = document.getElementById('softwareInfoBadge');
+
+        if (!versionSelect) return;
+
+        if (swId === 'custom') {
+            if (customGroup) customGroup.classList.remove('hidden');
+        } else {
+            if (customGroup) customGroup.classList.add('hidden');
+        }
+
+        const swList = SOFTWARE_OPTIONS[ed] || [];
+        const currentSw = swList.find(s => s.id === swId);
+        if (infoBadge && currentSw) {
+            infoBadge.innerHTML = `<strong>${currentSw.name}:</strong> ${currentSw.desc}`;
+        }
+
+        let verList = [];
+        if (swId === 'paper' && cachedPaperVersions.length > 0) {
+            verList = cachedPaperVersions;
+        } else {
+            const preset = PRESET_VERSIONS[swId];
+            verList = (preset && preset.length > 0) ? preset : ['1.20.4', '1.20.2', '1.20.1', '1.19.4', '1.18.2'];
+        }
+
+        versionSelect.innerHTML = '';
+        verList.forEach((v, idx) => {
+            const opt = document.createElement('option');
+            opt.value = v;
+            opt.textContent = `${swId.toUpperCase()} ${v}`;
+            if (idx === 0) opt.selected = true;
+            versionSelect.appendChild(opt);
+        });
+
+        const manualOpt = document.createElement('option');
+        manualOpt.value = '';
+        manualOpt.textContent = 'Do not auto-download jar (Manual setup)';
+        versionSelect.appendChild(manualOpt);
+    }
+
     async function populateCreateServerVersions() {
+        setupCreateServerModalEvents();
+        updateSoftwareDropdown();
+
         try {
             const res = await fetch('/api/installer/paper-versions');
-            const versions = await res.json();
-            const select = document.getElementById('newServerVersion');
-            select.innerHTML = '<option value="">Do not auto-download jar</option>';
-
-            if (Array.isArray(versions)) {
-                versions.slice().reverse().forEach(v => {
-                    const opt = document.createElement('option');
-                    opt.value = v;
-                    opt.textContent = `Paper ${v}`;
-                    select.appendChild(opt);
-                });
+            if (res.ok) {
+                const versions = await res.json();
+                if (Array.isArray(versions) && versions.length > 0) {
+                    cachedPaperVersions = versions.slice().reverse();
+                    updateVersionDropdown();
+                }
             }
         } catch (err) {
-            console.error(err);
+            console.error('Failed to fetch Paper versions', err);
         }
     }
 
@@ -1005,44 +1113,96 @@ document.addEventListener('DOMContentLoaded', () => {
     // Jar Installer
     // ------------------------------------------------------
     function initInstaller() {
-        document.getElementById('btnInstallPaper').addEventListener('click', async () => {
-            const ver = document.getElementById('paperVersionSelect').value;
-            if (!ver) return showToast('Select a version first', 'error');
+        populateInstallerDropdowns();
 
-            const res = await callApi('/api/installer/download-paper', { body: JSON.stringify({ version: ver }) });
+        const handleSoftwareDownload = async (software, versionSelectId, title) => {
+            const ver = document.getElementById(versionSelectId)?.value;
+            if (!ver) return showToast(`Select a ${title} version first`, 'error');
+
+            const res = await callApi('/api/installer/download-software', {
+                body: JSON.stringify({ software, version: ver })
+            });
+
             if (res && res.success) {
+                showToast(`Started ${title} ${ver} download...`, 'info');
                 pollInstallerProgress();
             }
+        };
+
+        document.getElementById('btnInstallPaper')?.addEventListener('click', () => {
+            handleSoftwareDownload('paper', 'paperVersionSelect', 'Paper');
         });
 
-        document.getElementById('btnInstallCustom').addEventListener('click', async () => {
+        document.getElementById('btnInstallPurpur')?.addEventListener('click', () => {
+            handleSoftwareDownload('purpur', 'purpurVersionSelect', 'Purpur');
+        });
+
+        document.getElementById('btnInstallVanilla')?.addEventListener('click', () => {
+            handleSoftwareDownload('vanilla', 'vanillaVersionSelect', 'Official Vanilla');
+        });
+
+        document.getElementById('btnInstallFabric')?.addEventListener('click', () => {
+            handleSoftwareDownload('fabric', 'fabricVersionSelect', 'Fabric');
+        });
+
+        document.getElementById('btnInstallGeyser')?.addEventListener('click', () => {
+            handleSoftwareDownload('geyser', 'geyserVersionSelect', 'Geyser Cross-Play');
+        });
+
+        document.getElementById('btnInstallCustom')?.addEventListener('click', async () => {
             const url = document.getElementById('customUrlInput').value.trim();
             if (!url) return showToast('Enter direct JAR URL', 'error');
 
             const res = await callApi('/api/installer/download-url', { body: JSON.stringify({ url, name: 'server.jar' }) });
             if (res && res.success) {
+                showToast('Started Custom JAR download...', 'info');
                 pollInstallerProgress();
             }
         });
     }
 
-    async function loadPaperVersions() {
-        try {
-            const res = await fetch('/api/installer/paper-versions');
-            const versions = await res.json();
-            const select = document.getElementById('paperVersionSelect');
-            select.innerHTML = '';
+    function populateSelectOptions(selectId, versions, labelPrefix) {
+        const select = document.getElementById(selectId);
+        if (!select) return;
+        select.innerHTML = '';
+        versions.forEach(v => {
+            const opt = document.createElement('option');
+            opt.value = v;
+            opt.textContent = `${labelPrefix} ${v}`;
+            select.appendChild(opt);
+        });
+    }
 
-            if (Array.isArray(versions)) {
-                versions.slice().reverse().forEach(v => {
-                    const opt = document.createElement('option');
-                    opt.value = v;
-                    opt.textContent = `Paper ${v}`;
-                    select.appendChild(opt);
-                });
+    async function populateInstallerDropdowns() {
+        const paperPresets = (PRESET_VERSIONS && PRESET_VERSIONS.paper && PRESET_VERSIONS.paper.length > 0) 
+            ? PRESET_VERSIONS.paper 
+            : ['1.20.4', '1.20.2', '1.20.1', '1.19.4', '1.19.2', '1.18.2', '1.16.5'];
+
+        populateSelectOptions('paperVersionSelect', paperPresets, 'Paper');
+        populateSelectOptions('purpurVersionSelect', PRESET_VERSIONS.purpur || ['1.20.4', '1.20.2', '1.20.1'], 'Purpur');
+        populateSelectOptions('vanillaVersionSelect', PRESET_VERSIONS.vanilla || ['1.20.4', '1.20.2', '1.20.1'], 'Vanilla');
+        populateSelectOptions('fabricVersionSelect', PRESET_VERSIONS.fabric || ['1.20.4', '1.20.2', '1.20.1'], 'Fabric');
+        populateSelectOptions('geyserVersionSelect', PRESET_VERSIONS.geyser || ['1.20.4', '1.20.2', '1.20.1'], 'Geyser');
+
+        try {
+            const resLinks = await fetch('/api/installer/links');
+            if (resLinks.ok) {
+                state.softwareLinks = await resLinks.json();
             }
         } catch (err) {
-            console.error('Versions fetch error', err);
+            console.error('Software links load error', err);
+        }
+
+        try {
+            const res = await fetch('/api/installer/paper-versions');
+            if (res.ok) {
+                const versions = await res.json();
+                if (Array.isArray(versions) && versions.length > 0) {
+                    populateSelectOptions('paperVersionSelect', versions.slice().reverse(), 'Paper');
+                }
+            }
+        } catch (err) {
+            console.error('Paper versions load error', err);
         }
     }
 

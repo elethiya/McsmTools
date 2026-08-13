@@ -3,6 +3,7 @@ package servermgr
 import (
 	"encoding/json"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -17,6 +18,9 @@ import (
 type ServerInstance struct {
 	ID          string    `json:"id"`
 	Name        string    `json:"name"`
+	Edition     string    `json:"edition,omitempty"`
+	Software    string    `json:"software,omitempty"`
+	Version     string    `json:"version,omitempty"`
 	ServerDir   string    `json:"server_dir"`
 	Port        int       `json:"port"`
 	JarName     string    `json:"jar_name"`
@@ -171,7 +175,7 @@ func GetActiveID() string {
 	return GlobalServerMgr.activeServer
 }
 
-func CreateServer(name, paperVersion string, mcPort int, memoryMin, memoryMax string) (*ServerInstance, error) {
+func CreateServer(name, edition, software, version string, mcPort int, memoryMin, memoryMax, customURL string) (*ServerInstance, error) {
 	GlobalServerMgr.mu.Lock()
 	defer GlobalServerMgr.mu.Unlock()
 
@@ -191,7 +195,13 @@ func CreateServer(name, paperVersion string, mcPort int, memoryMin, memoryMax st
 	}
 
 	if mcPort <= 0 {
-		mcPort = 25565 + len(GlobalServerMgr.servers)
+		basePort := 25565
+		if edition == "bedrock" {
+			basePort = 19132
+		}
+		mcPort = findNextAvailablePort(basePort + len(GlobalServerMgr.servers))
+	} else if !isPortAvailable(mcPort) {
+		mcPort = findNextAvailablePort(mcPort + 1)
 	}
 
 	if memoryMin == "" {
@@ -209,6 +219,9 @@ func CreateServer(name, paperVersion string, mcPort int, memoryMin, memoryMax st
 	s := &ServerInstance{
 		ID:          id,
 		Name:        name,
+		Edition:     edition,
+		Software:    software,
+		Version:     version,
 		ServerDir:   serverDir,
 		Port:        mcPort,
 		JarName:     "server.jar",
@@ -221,13 +234,15 @@ func CreateServer(name, paperVersion string, mcPort int, memoryMin, memoryMax st
 	}
 
 	GlobalServerMgr.servers[id] = s
+	GlobalServerMgr.activeServer = id
+	syncActiveConfig(s)
 	_ = saveServersLocked()
 
-	// Download Paper Jar if version specified
-	if paperVersion != "" {
-		go func(targetDir, version string) {
-			_ = installers.DownloadPaperJarIntoDir(targetDir, version)
-		}(serverDir, paperVersion)
+	// Download selected software and version into server directory
+	if software != "" || customURL != "" {
+		go func(targetDir, sw, ver, url string) {
+			_ = installers.DownloadServerSoftwareIntoDir(targetDir, sw, ver, url)
+		}(serverDir, software, version, customURL)
 	}
 
 	return s, nil
@@ -285,4 +300,22 @@ func DeleteServer(id string, deleteFiles bool) error {
 	}
 
 	return saveServersLocked()
+}
+
+func isPortAvailable(port int) bool {
+	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+	if err != nil {
+		return false
+	}
+	_ = ln.Close()
+	return true
+}
+
+func findNextAvailablePort(startPort int) int {
+	for p := startPort; p < startPort+500; p++ {
+		if isPortAvailable(p) {
+			return p
+		}
+	}
+	return startPort
 }

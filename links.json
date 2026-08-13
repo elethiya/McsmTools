@@ -1,0 +1,63 @@
+{
+  "software_links": {
+    "paper": {
+      "name": "PaperMC",
+      "edition": "java",
+      "website": "https://papermc.io",
+      "api_url": "https://fill.papermc.io/v3/projects/paper",
+      "builds_url_template": "https://fill.papermc.io/v3/projects/paper/versions/{version}/builds",
+      "download_url_template": "https://fill.papermc.io/v3/projects/paper/versions/{version}/builds/{build}"
+    },
+    "purpur": {
+      "name": "Purpur",
+      "edition": "java",
+      "website": "https://purpurmc.org",
+      "api_url": "https://api.purpurmc.org/v2/purpur",
+      "download_url_template": "https://api.purpurmc.org/v2/purpur/{version}/latest/download"
+    },
+    "vanilla": {
+      "name": "Official Vanilla (Mojang)",
+      "edition": "java",
+      "website": "https://www.minecraft.net",
+      "manifest_url": "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json"
+    },
+    "fabric": {
+      "name": "Fabric",
+      "edition": "java",
+      "website": "https://fabricmc.net",
+      "api_url": "https://meta.fabricmc.net/v2/versions/loader",
+      "download_url_template": "https://meta.fabricmc.net/v2/versions/loader/{version}/0.15.7/1.0.1/server/jar"
+    },
+    "geyser": {
+      "name": "Paper + GeyserMC (Cross-Play)",
+      "edition": "bedrock_crossplay",
+      "website": "https://geysermc.org",
+      "paper_api_url": "https://api.papermc.io/v2/projects/paper",
+      "geyser_plugin_url": "https://download.geysermc.org/v2/projects/geyser/versions/latest/builds/latest/downloads/spigot"
+    },
+    "spigot": {
+      "name": "Spigot",
+      "edition": "java",
+      "website": "https://www.spigotmc.org",
+      "download_url_template": "https://cdn.getbukkit.org/spigot/spigot-{version}.jar"
+    },
+    "forge": {
+      "name": "Forge",
+      "edition": "java",
+      "website": "https://files.minecraftforge.net",
+      "download_url_template": "https://maven.minecraftforge.net/net/minecraftforge/forge/{version}/forge-{version}-installer.jar"
+    },
+    "pocketmine": {
+      "name": "PocketMine-MP",
+      "edition": "bedrock",
+      "website": "https://pmmp.io",
+      "download_url_template": "https://github.com/pmmp/PocketMine-MP/releases/download/{version}/PocketMine-MP.phar"
+    },
+    "bedrock_bds": {
+      "name": "Official Bedrock Dedicated Server (BDS)",
+      "edition": "bedrock",
+      "website": "https://www.minecraft.net/en-us/download/server/bedrock",
+      "download_url_template": "https://www.minecraft.net/bedrock-dedicated-server/bin-linux/bedrock-server-{version}.zip"
+    }
+  }
+}

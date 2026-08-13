@@ -28,7 +28,7 @@ type PlayerListData struct {
 
 func GetPlayerLists() (*PlayerListData, error) {
 	cfg := config.GlobalConfig
-	serverDir := "./mc_server"
+	serverDir := "./servers/default-server"
 	if cfg != nil {
 		serverDir = cfg.ServerDir
 	}

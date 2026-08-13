@@ -19,7 +19,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
     <!-- Panel CSS -->
-    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/style.css?v=1.3.0">
 </head>
 <body>
     <div class="app-layout">
@@ -375,32 +375,82 @@
                 <div class="card">
                     <div class="card-header">
                         <h3>Automatic Server Jar Installer</h3>
-                        <p class="text-muted">Download and install PaperMC or custom server jars directly</p>
+                        <p class="text-muted">Download and install Paper, Purpur, Official Vanilla, Fabric, Geyser or custom server jars with 1-click</p>
                     </div>
                     <div class="card-body">
                         <div class="installer-grid">
+                            <!-- 1. PaperMC -->
                             <div class="installer-box">
-                                <h4>PaperMC High Performance Jar</h4>
-                                <p class="text-sm">Select version to auto-download latest build:</p>
-                                <div class="form-group">
+                                <h4>⚡ PaperMC (High Performance)</h4>
+                                <p class="text-sm">Optimized Minecraft server with rich plugin support:</p>
+                                <div class="form-group margin-top-xs">
                                     <select id="paperVersionSelect" class="form-control">
-                                        <option value="">Loading versions...</option>
+                                        <option value="">Loading Paper versions...</option>
                                     </select>
                                 </div>
-                                <button id="btnInstallPaper" class="btn btn-primary btn-block">Download & Install Paper</button>
+                                <button id="btnInstallPaper" class="btn btn-primary btn-block margin-top-xs">Download & Install Paper</button>
                             </div>
 
+                            <!-- 2. Purpur -->
                             <div class="installer-box">
-                                <h4>Direct Download via URL</h4>
-                                <p class="text-sm">Paste direct link to any server.jar (Spigot, Purpur, Fabric, Forge):</p>
-                                <div class="form-group">
+                                <h4>🟣 Purpur (Highly Customizable)</h4>
+                                <p class="text-sm">Paper fork with extensive performance & gameplay options:</p>
+                                <div class="form-group margin-top-xs">
+                                    <select id="purpurVersionSelect" class="form-control">
+                                        <!-- Populated via JS -->
+                                    </select>
+                                </div>
+                                <button id="btnInstallPurpur" class="btn btn-primary btn-block margin-top-xs">Download & Install Purpur</button>
+                            </div>
+
+                            <!-- 3. Official Vanilla -->
+                            <div class="installer-box">
+                                <h4>🔴 Official Vanilla (Mojang)</h4>
+                                <p class="text-sm">Original unmodified official Minecraft server jar:</p>
+                                <div class="form-group margin-top-xs">
+                                    <select id="vanillaVersionSelect" class="form-control">
+                                        <!-- Populated via JS -->
+                                    </select>
+                                </div>
+                                <button id="btnInstallVanilla" class="btn btn-outline btn-block margin-top-xs">Download & Install Vanilla</button>
+                            </div>
+
+                            <!-- 4. Fabric -->
+                            <div class="installer-box">
+                                <h4>🧵 Fabric (Lightweight Modded)</h4>
+                                <p class="text-sm">Modern modular server loader for Fabric modpacks:</p>
+                                <div class="form-group margin-top-xs">
+                                    <select id="fabricVersionSelect" class="form-control">
+                                        <!-- Populated via JS -->
+                                    </select>
+                                </div>
+                                <button id="btnInstallFabric" class="btn btn-outline btn-block margin-top-xs">Download & Install Fabric</button>
+                            </div>
+
+                            <!-- 5. Geyser Cross-Play -->
+                            <div class="installer-box">
+                                <h4>🌐 GeyserMC (Java + Bedrock Cross-Play)</h4>
+                                <p class="text-sm">Installs Paper server + Geyser-Spigot plugin for Bedrock joins:</p>
+                                <div class="form-group margin-top-xs">
+                                    <select id="geyserVersionSelect" class="form-control">
+                                        <!-- Populated via JS -->
+                                    </select>
+                                </div>
+                                <button id="btnInstallGeyser" class="btn btn-success btn-block margin-top-xs">Download & Install Geyser Cross-Play</button>
+                            </div>
+
+                            <!-- 6. Custom URL -->
+                            <div class="installer-box">
+                                <h4>🔗 Direct Download via URL</h4>
+                                <p class="text-sm">Paste direct link to any server jar (Forge, Spigot, Custom):</p>
+                                <div class="form-group margin-top-xs">
                                     <input type="text" id="customUrlInput" class="form-control" placeholder="https://example.com/server.jar">
                                 </div>
-                                <button id="btnInstallCustom" class="btn btn-outline btn-block">Download from URL</button>
+                                <button id="btnInstallCustom" class="btn btn-dark btn-block margin-top-xs">Download from URL</button>
                             </div>
                         </div>
 
-                        <div id="installerProgressCard" class="progress-box hidden">
+                        <div id="installerProgressCard" class="progress-box hidden margin-top">
                             <h5 id="installerMsg">Downloading...</h5>
                             <div class="progress-bar-bg"><div id="installerBar" class="progress-bar" style="width: 0%"></div></div>
                         </div>
@@ -499,29 +549,70 @@
             <form id="createServerForm" class="margin-top">
                 <div class="form-group">
                     <label>Server Name</label>
-                    <input type="text" id="newServerName" class="form-control" placeholder="Survival 1.20" required>
+                    <input type="text" id="newServerName" class="form-control" placeholder="Survival SMP 1.20" required>
                 </div>
-                <div class="form-group">
-                    <label>Minecraft Port</label>
-                    <input type="number" id="newServerPort" class="form-control" placeholder="25565" value="25565" required>
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Minecraft Edition</label>
+                        <select id="newServerEdition" class="form-control">
+                            <option value="java" selected>Java Edition</option>
+                            <option value="bedrock">Bedrock Edition</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Server Software</label>
+                        <select id="newServerSoftware" class="form-control">
+                            <option value="paper" selected>PaperMC</option>
+                            <option value="purpur">Purpur</option>
+                            <option value="vanilla">Official Minecraft (Mojang)</option>
+                            <option value="fabric">Fabric</option>
+                            <option value="spigot">Spigot</option>
+                            <option value="forge">Forge</option>
+                            <option value="custom">Custom Jar URL</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label>Paper MC Version</label>
+
+                <div class="form-group margin-top-xs">
+                    <label>Software Version</label>
                     <select id="newServerVersion" class="form-control">
-                        <option value="">Do not auto-download jar</option>
+                        <option value="1.20.4" selected>PAPER 1.20.4</option>
+                        <option value="1.20.2">PAPER 1.20.2</option>
+                        <option value="1.20.1">PAPER 1.20.1</option>
+                        <option value="1.19.4">PAPER 1.19.4</option>
+                        <option value="1.18.2">PAPER 1.18.2</option>
+                        <option value="1.16.5">PAPER 1.16.5</option>
                     </select>
                 </div>
-                <div class="form-grid margin-top">
+
+                <div id="customUrlGroup" class="form-group margin-top-xs hidden">
+                    <label>Custom Jar Direct Download URL</label>
+                    <input type="text" id="newServerCustomUrl" class="form-control" placeholder="https://example.com/custom-server.jar">
+                </div>
+
+                <div id="softwareInfoBadge" class="alert alert-info text-xs margin-top-xs">
+                    Select Edition and Software to view details.
+                </div>
+
+                <div class="form-group margin-top-xs">
+                    <label>Minecraft Server Port</label>
+                    <input type="number" id="newServerPort" class="form-control" placeholder="25565" value="25565" required>
+                </div>
+
+                <div class="form-grid margin-top-xs">
                     <div class="form-group">
-                        <label>Min RAM</label>
+                        <label>Min RAM (-Xms)</label>
                         <input type="text" id="newServerRamMin" class="form-control" value="1024M">
                     </div>
                     <div class="form-group">
-                        <label>Max RAM</label>
+                        <label>Max RAM (-Xmx)</label>
                         <input type="text" id="newServerRamMax" class="form-control" value="2048M">
                     </div>
                 </div>
-                <div class="modal-footer">
+
+                <div class="modal-footer margin-top">
                     <button type="button" id="btnCancelCreateServer" class="btn btn-outline">Cancel</button>
                     <button type="submit" class="btn btn-primary">Create Server</button>
                 </div>
@@ -558,6 +649,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/markdown/markdown.min.js"></script>
 
     <!-- App JS -->
-    <script src="/static/js/app.js"></script>
+    <script src="/static/js/app.js?v=1.4.0"></script>
 </body>
 </html>

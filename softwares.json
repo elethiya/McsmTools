@@ -1,0 +1,17 @@
+{
+  "java": [
+    { "id": "paper", "name": "PaperMC", "desc": "High performance, plugin support & optimization (Recommended for SMPs)" },
+    { "id": "purpur", "name": "Purpur", "desc": "Highly customizable Paper fork with performance & gameplay tweaks" },
+    { "id": "vanilla", "name": "Official Minecraft (Mojang)", "desc": "Unmodified official vanilla Minecraft server" },
+    { "id": "fabric", "name": "Fabric", "desc": "Lightweight modded server loader with modern mod ecosystem" },
+    { "id": "spigot", "name": "Spigot", "desc": "Classic Bukkit/Spigot plugin-supported Minecraft server" },
+    { "id": "forge", "name": "Forge", "desc": "Classic heavy modded server for Forge modpacks" },
+    { "id": "custom", "name": "Custom Jar URL", "desc": "Download custom server.jar directly from link" }
+  ],
+  "bedrock": [
+    { "id": "geyser", "name": "Paper + GeyserMC (Cross-Play)", "desc": "Java + Bedrock players can join the same SMP server together!" },
+    { "id": "bedrock_bds", "name": "Official Bedrock Dedicated Server (BDS)", "desc": "Official Mojang Bedrock Dedicated Server" },
+    { "id": "pocketmine", "name": "PocketMine-MP", "desc": "PHP Plugin-based Bedrock Server" },
+    { "id": "custom", "name": "Custom Executable URL", "desc": "Download custom Bedrock server executable from link" }
+  ]
+}
