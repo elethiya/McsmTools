@@ -81,7 +81,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
 
         const titles = {
-            dashboard: { title: 'Dashboard', sub: 'Overview and real-time server metrics' },
+            server: { title: 'Server Management', sub: 'Manage and select server instances' },
+            dashboard: { title: 'anylytics', sub: 'Overview and real-time server metrics' },
             console: { title: 'Console Terminal', sub: 'Interactive Minecraft server output and commands' },
             files: { title: 'File & Code Manager', sub: 'Create, browse, edit and manage server files & code' },
             players: { title: 'Player Management', sub: 'Operators, Whitelist and Banned player list' },

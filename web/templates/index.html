@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>McsmTools - Minecraft Control Center</title>
+    <link rel="icon" type="image/x-icon" href="/static/assets/favicon.ico">
 
     <!-- Typography -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -26,11 +27,7 @@
         <header class="global-header">
             <div class="header-left">
                 <div class="brand-logo">
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
-                        <polyline points="2 17 12 22 22 17"></polyline>
-                        <polyline points="2 12 12 17 22 12"></polyline>
-                    </svg>
+                    <img src="/static/assets/logo.webp" alt="Logo" width="28" height="28" style="object-fit: contain;">
                     <span>McsmTools</span>
                 </div>
                 <button class="btn-help">
@@ -75,7 +72,7 @@
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
                         <span>anylytics</span>
                     </a>
-                    <a href="#server" class="nav-item">
+                    <a href="#server" class="nav-item" data-tab="server">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg>
                         <span>Server</span>
                         <span class="chev">&gt;</span>
@@ -91,7 +88,6 @@
                     <a href="#log" class="nav-item active">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
                         <span>Log</span>
-                        <span class="badge-red">1</span>
                     </a>
                     <a href="#players" class="nav-item" data-tab="players">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
@@ -126,26 +122,6 @@
                     <a href="#settings" class="nav-item" data-tab="settings" style="display:none;"></a>
                 </nav>
 
-                <div class="server-instance-selector" style="margin:20px; background:transparent; border-color:#4a5568;">
-                    <label class="text-muted text-xs">Active Server Instance</label>
-                    <select id="serverSelect" class="form-control form-control-sm margin-top-xs" style="background:#374151; border-color:#4a5568;">
-                        <option value="default-server">Loading Servers...</option>
-                    </select>
-                    <div class="instance-actions">
-                        <button id="btnCreateServerModal" class="btn btn-xs btn-primary btn-block margin-top-xs">+ Create New Server</button>
-                        <button id="btnDeleteServerModal" class="btn btn-xs btn-danger btn-block margin-top-xs">Delete Active Server</button>
-                    </div>
-                </div>
-
-                <div class="server-status-card" style="margin:0 20px 20px 20px; background:transparent; border-color:#4a5568;">
-                    <div class="status-indicator">
-                        <span id="globalStatusDot" class="status-dot status-stopped"></span>
-                        <span id="globalStatusText" class="status-label">STOPPED</span>
-                    </div>
-                    <div class="status-meta">
-                        <small>Uptime: <span id="globalUptime">0s</span></small>
-                    </div>
-                </div>
             </aside>
 
             <!-- Main Content Area -->
@@ -153,34 +129,67 @@
             <!-- Top Controls Bar -->
             <header class="top-bar">
                 <div class="top-title">
-                    <h1 id="pageTitle">Dashboard</h1>
+                    <h1 id="pageTitle">anylytics</h1>
                     <span id="pageSubtitle" class="text-muted">Overview and real-time server metrics</span>
-                </div>
-
-                <div class="server-controls">
-                    <button id="btnStart" class="btn btn-success">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-                        <span>Start</span>
-                    </button>
-                    <button id="btnRestart" class="btn btn-warning">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
-                        <span>Restart</span>
-                    </button>
-                    <button id="btnStop" class="btn btn-danger">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12"></rect></svg>
-                        <span>Stop</span>
-                    </button>
-                    <button id="btnKill" class="btn btn-dark" title="Force Kill Process">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                        <span>Kill</span>
-                    </button>
                 </div>
             </header>
 
             <!-- Notifications Container -->
             <div id="toastContainer" class="toast-container"></div>
 
-            <!-- Tab Content 1: Dashboard -->
+            <!-- Tab Content 0: Server -->
+            <section id="tab-server" class="tab-panel">
+                <div class="card">
+                    <div class="card-header flex-between">
+                        <h3>Server Controls</h3>
+                        <div class="server-controls">
+                            <button id="btnStart" class="btn btn-success">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                                <span>Start</span>
+                            </button>
+                            <button id="btnRestart" class="btn btn-warning">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+                                <span>Restart</span>
+                            </button>
+                            <button id="btnStop" class="btn btn-danger">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12"></rect></svg>
+                                <span>Stop</span>
+                            </button>
+                            <button id="btnKill" class="btn btn-dark" title="Force Kill Process">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                <span>Kill</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-grid">
+                            <div class="server-instance-selector">
+                                <label class="text-muted text-xs">Active Server Instance</label>
+                                <select id="serverSelect" class="form-control form-control-sm margin-top-xs">
+                                    <option value="default-server">Loading Servers...</option>
+                                </select>
+                                <div class="instance-actions margin-top">
+                                    <button id="btnCreateServerModal" class="btn btn-sm btn-primary">+ Create New Server</button>
+                                    <button id="btnDeleteServerModal" class="btn btn-sm btn-danger">Delete Active Server</button>
+                                </div>
+                            </div>
+
+                            <div class="server-status-card">
+                                <label class="text-muted text-xs margin-bottom-sm" style="display:block;">Server Status</label>
+                                <div class="status-indicator">
+                                    <span id="globalStatusDot" class="status-dot status-stopped"></span>
+                                    <span id="globalStatusText" class="status-label">STOPPED</span>
+                                </div>
+                                <div class="status-meta margin-top">
+                                    <small>Uptime: <span id="globalUptime">0s</span></small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tab Content 1: anylytics -->
             <section id="tab-dashboard" class="tab-panel active">
                 <div class="metrics-grid">
                     <div class="metric-card">
