@@ -318,7 +318,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         state.ws = new WebSocket(wsUrl);
 
         state.ws.onopen = () => {
-            console.log('[McsmTools] WebSocket connected');
+            console.log('[MCSM TOOLS] WebSocket connected');
         };
 
         state.ws.onmessage = (event) => {
@@ -337,7 +337,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
 
         state.ws.onclose = () => {
-            console.warn('[McsmTools] WebSocket disconnected. Retrying in 3s...');
+            console.warn('[MCSM TOOLS] WebSocket disconnected. Retrying in 3s...');
             setTimeout(initWebSocket, 3000);
         };
     }
