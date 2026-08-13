@@ -1,0 +1,288 @@
+package servermgr
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+	"sync"
+	"time"
+
+	"void-panel/pkg/config"
+	"void-panel/pkg/installers"
+	"void-panel/pkg/mcserver"
+)
+
+type ServerInstance struct {
+	ID          string    `json:"id"`
+	Name        string    `json:"name"`
+	ServerDir   string    `json:"server_dir"`
+	Port        int       `json:"port"`
+	JarName     string    `json:"jar_name"`
+	MemoryMin   string    `json:"memory_min"`
+	MemoryMax   string    `json:"memory_max"`
+	JavaPath    string    `json:"java_path"`
+	JavaFlags   string    `json:"java_flags"`
+	AutoRestart bool      `json:"auto_restart"`
+	CreatedAt   time.Time `json:"created_at"`
+	Status      string    `json:"status,omitempty"`
+}
+
+type Manager struct {
+	mu           sync.RWMutex
+	servers      map[string]*ServerInstance
+	activeServer string
+	dataPath     string
+}
+
+var GlobalServerMgr *Manager
+
+func init() {
+	GlobalServerMgr = &Manager{
+		servers:  make(map[string]*ServerInstance),
+		dataPath: "servers.json",
+	}
+}
+
+func LoadServers() error {
+	GlobalServerMgr.mu.Lock()
+	defer GlobalServerMgr.mu.Unlock()
+
+	cfg := config.GlobalConfig
+	baseServersDir := "./servers"
+	_ = os.MkdirAll(baseServersDir, 0755)
+
+	if _, err := os.Stat(GlobalServerMgr.dataPath); os.IsNotExist(err) {
+		// Create default initial server instance if none exists
+		defPath, _ := filepath.Abs(cfg.ServerDir)
+		defServer := &ServerInstance{
+			ID:          "default-server",
+			Name:        "Default Minecraft Server",
+			ServerDir:   defPath,
+			Port:        25565,
+			JarName:     cfg.ServerJar,
+			MemoryMin:   cfg.MemoryMin,
+			MemoryMax:   cfg.MemoryMax,
+			JavaPath:    cfg.JavaPath,
+			JavaFlags:   cfg.JavaFlags,
+			AutoRestart: cfg.AutoRestart,
+			CreatedAt:   time.Now(),
+		}
+		GlobalServerMgr.servers[defServer.ID] = defServer
+		GlobalServerMgr.activeServer = defServer.ID
+		return saveServersLocked()
+	}
+
+	data, err := os.ReadFile(GlobalServerMgr.dataPath)
+	if err != nil {
+		return err
+	}
+
+	var loaded struct {
+		ActiveID string            `json:"active_id"`
+		Servers  []*ServerInstance `json:"servers"`
+	}
+
+	if err := json.Unmarshal(data, &loaded); err != nil {
+		return err
+	}
+
+	for _, s := range loaded.Servers {
+		GlobalServerMgr.servers[s.ID] = s
+	}
+
+	if loaded.ActiveID != "" && GlobalServerMgr.servers[loaded.ActiveID] != nil {
+		GlobalServerMgr.activeServer = loaded.ActiveID
+	} else if len(loaded.Servers) > 0 {
+		GlobalServerMgr.activeServer = loaded.Servers[0].ID
+	}
+
+	// Sync active server into GlobalConfig
+	active := GlobalServerMgr.servers[GlobalServerMgr.activeServer]
+	if active != nil {
+		syncActiveConfig(active)
+	}
+
+	return nil
+}
+
+func saveServersLocked() error {
+	list := make([]*ServerInstance, 0, len(GlobalServerMgr.servers))
+	for _, s := range GlobalServerMgr.servers {
+		list = append(list, s)
+	}
+
+	payload := map[string]interface{}{
+		"active_id": GlobalServerMgr.activeServer,
+		"servers":   list,
+	}
+
+	data, err := json.MarshalIndent(payload, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(GlobalServerMgr.dataPath, data, 0644)
+}
+
+func syncActiveConfig(s *ServerInstance) {
+	cfg := config.GlobalConfig
+	if cfg != nil {
+		cfg.ServerDir = s.ServerDir
+		cfg.ServerJar = s.JarName
+		cfg.MemoryMin = s.MemoryMin
+		cfg.MemoryMax = s.MemoryMax
+		cfg.JavaPath = s.JavaPath
+		cfg.JavaFlags = s.JavaFlags
+		cfg.AutoRestart = s.AutoRestart
+	}
+}
+
+func ListServers() []*ServerInstance {
+	GlobalServerMgr.mu.RLock()
+	defer GlobalServerMgr.mu.RUnlock()
+
+	activeID := GlobalServerMgr.activeServer
+	list := make([]*ServerInstance, 0, len(GlobalServerMgr.servers))
+
+	for _, s := range GlobalServerMgr.servers {
+		cp := *s
+		if s.ID == activeID {
+			cp.Status = string(mcserver.GetManager().GetStatus())
+		} else {
+			cp.Status = "STOPPED"
+		}
+		list = append(list, &cp)
+	}
+
+	return list
+}
+
+func GetActiveServer() *ServerInstance {
+	GlobalServerMgr.mu.RLock()
+	defer GlobalServerMgr.mu.RUnlock()
+
+	return GlobalServerMgr.servers[GlobalServerMgr.activeServer]
+}
+
+func GetActiveID() string {
+	GlobalServerMgr.mu.RLock()
+	defer GlobalServerMgr.mu.RUnlock()
+	return GlobalServerMgr.activeServer
+}
+
+func CreateServer(name, paperVersion string, mcPort int, memoryMin, memoryMax string) (*ServerInstance, error) {
+	GlobalServerMgr.mu.Lock()
+	defer GlobalServerMgr.mu.Unlock()
+
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return nil, fmt.Errorf("server name cannot be empty")
+	}
+
+	id := "server-" + fmt.Sprintf("%d", time.Now().UnixNano()%100000)
+	serverDir, err := filepath.Abs(filepath.Join("./servers", id))
+	if err != nil {
+		return nil, err
+	}
+
+	if err := os.MkdirAll(serverDir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create server directory: %v", err)
+	}
+
+	if mcPort <= 0 {
+		mcPort = 25565 + len(GlobalServerMgr.servers)
+	}
+
+	if memoryMin == "" {
+		memoryMin = "1024M"
+	}
+	if memoryMax == "" {
+		memoryMax = "2048M"
+	}
+
+	// Create initial server.properties
+	propsContent := fmt.Sprintf("# Generated by VoidPanel\nserver-port=%d\nquery.port=%d\nmotd=Welcome to %s\neula=true\n", mcPort, mcPort, name)
+	_ = os.WriteFile(filepath.Join(serverDir, "server.properties"), []byte(propsContent), 0644)
+	_ = os.WriteFile(filepath.Join(serverDir, "eula.txt"), []byte("eula=true\n"), 0644)
+
+	s := &ServerInstance{
+		ID:          id,
+		Name:        name,
+		ServerDir:   serverDir,
+		Port:        mcPort,
+		JarName:     "server.jar",
+		MemoryMin:   memoryMin,
+		MemoryMax:   memoryMax,
+		JavaPath:    "java",
+		JavaFlags:   "-XX:+UseG1GC",
+		AutoRestart: false,
+		CreatedAt:   time.Now(),
+	}
+
+	GlobalServerMgr.servers[id] = s
+	_ = saveServersLocked()
+
+	// Download Paper Jar if version specified
+	if paperVersion != "" {
+		go func(targetDir, version string) {
+			_ = installers.DownloadPaperJarIntoDir(targetDir, version)
+		}(serverDir, paperVersion)
+	}
+
+	return s, nil
+}
+
+func SwitchServer(id string) error {
+	GlobalServerMgr.mu.Lock()
+	defer GlobalServerMgr.mu.Unlock()
+
+	s, exists := GlobalServerMgr.servers[id]
+	if !exists {
+		return fmt.Errorf("server instance %s not found", id)
+	}
+
+	// Ensure current active server is stopped before switching
+	if mcserver.GetManager().GetStatus() != mcserver.StatusStopped {
+		return fmt.Errorf("please stop the currently running server before switching instances")
+	}
+
+	GlobalServerMgr.activeServer = id
+	syncActiveConfig(s)
+	_ = saveServersLocked()
+
+	return nil
+}
+
+func DeleteServer(id string, deleteFiles bool) error {
+	GlobalServerMgr.mu.Lock()
+	defer GlobalServerMgr.mu.Unlock()
+
+	s, exists := GlobalServerMgr.servers[id]
+	if !exists {
+		return fmt.Errorf("server instance not found")
+	}
+
+	if id == GlobalServerMgr.activeServer {
+		if mcserver.GetManager().GetStatus() != mcserver.StatusStopped {
+			return fmt.Errorf("cannot delete server while it is running. Stop the server first")
+		}
+	}
+
+	delete(GlobalServerMgr.servers, id)
+
+	if deleteFiles && s.ServerDir != "" {
+		_ = os.RemoveAll(s.ServerDir)
+	}
+
+	// Switch to remaining server if active deleted
+	if id == GlobalServerMgr.activeServer {
+		for remainingID := range GlobalServerMgr.servers {
+			GlobalServerMgr.activeServer = remainingID
+			syncActiveConfig(GlobalServerMgr.servers[remainingID])
+			break
+		}
+	}
+
+	return saveServersLocked()
+}
